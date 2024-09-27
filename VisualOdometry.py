@@ -28,11 +28,9 @@ class VisualOdometry:
         Loads all files from ``data_dir``
 
         """
-        path = f"{data_dir}/image_l/"
-
-        img_files = os.listdir(path)
+        img_files = os.listdir(data_dir)
     
-        images = [cv2.imread(os.path.join(path, img), cv2.IMREAD_GRAYSCALE) for img in sorted(img_files)]
+        images = [cv2.imread(os.path.join(data_dir, img), cv2.IMREAD_GRAYSCALE) for img in sorted(img_files)]
         
         return images
     
@@ -131,7 +129,7 @@ class VisualOdometry:
 
             cv2.imshow("Current Image", image)
 
-            if cv2.waitKey(200) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
 
@@ -139,7 +137,7 @@ def main():
     
     vo = VisualOdometry()
 
-    images = vo.load_kitti("data/KITTI_sequence_2")
+    images = vo.load_kitti("data/dataset/sequences/06/image_0/")
 
     vo.play_from_list(images)
 
