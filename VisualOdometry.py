@@ -5,8 +5,8 @@ import os
 class VisualOdometry:
 
     def __init__(self):
-        self.orb = cv2.ORB_create(3000)  
-        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) 
+        self.orb = cv2.ORB_create(10000)  
+        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False) 
 
         self.prev_image = None
         self.prev_keypoints = None
@@ -17,10 +17,15 @@ class VisualOdometry:
         self.K = np.array([[718.856, 0, 607.1928],
                            [0, 718.856, 185.2157],
                            [0, 0, 1]])
+        calib_file = "data/calib.txt"
+        with open(calib_file, 'r') as f:
+            params = np.fromstring(f.readline(), dtype=np.float64, sep=' ')
+            P = np.reshape(params, (3, 4))
+            self.K = P[0:3, 0:3]
         
         self.R = np.eye(3)
         self.t = np.zeros((3, 1))
-        self.trajectory_image = np.zeros((600, 600, 3), dtype=np.uint8) + 255
+        self.trajectory_image = np.zeros((1200, 1200, 3), dtype=np.uint8) + 255
     
     def load_kitti(self, data_dir):
         """
@@ -28,9 +33,11 @@ class VisualOdometry:
         Loads all files from ``data_dir``
 
         """
-        img_files = os.listdir(data_dir)
+        img_data = os.path.join(data_dir, "image_0/")
+
+        img_files = os.listdir(img_data)
     
-        images = [cv2.imread(os.path.join(data_dir, img), cv2.IMREAD_GRAYSCALE) for img in sorted(img_files)]
+        images = [cv2.imread(os.path.join(img_data, img), cv2.IMREAD_GRAYSCALE) for img in sorted(img_files)]
         
         return images
     
@@ -52,9 +59,16 @@ class VisualOdometry:
         
         """
 
-        matches = self.bf.match(descriptors1, descriptors2)
+        matches = self.bf.knnMatch(descriptors1, descriptors2, k=2)
 
-        return sorted(matches, key=lambda x: x.distance)
+        good_matches = []
+
+        ratio_thresh = 0.75
+        for m, n in matches:
+            if m.distance < ratio_thresh * n.distance:
+                good_matches.append(m)
+        
+        return good_matches
     
     def estimate_pose(self, keypoints1, keypoints2, matches):
         """
@@ -94,7 +108,7 @@ class VisualOdometry:
         Draws trajectory on self.trajetory_image
 
         """
-        x, y = int(self.t[0]) + 300, int(self.t[2]) + 300
+        x, y = int(self.t[0]) + 600, int(self.t[2]) + 600
         cv2.circle(self.trajectory_image, (x, y), 2, (0, 0, 255), 1)
 
 
@@ -137,7 +151,7 @@ def main():
     
     vo = VisualOdometry()
 
-    images = vo.load_kitti("data/dataset/sequences/06/image_0/")
+    images = vo.load_kitti("data/dataset/sequences/06/")
 
     vo.play_from_list(images)
 
