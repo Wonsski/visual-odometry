@@ -108,9 +108,25 @@ class VisualOdometry:
         Draws trajectory on self.trajetory_image
 
         """
-        x, y = int(self.t[0]) + 600, int(self.t[2]) + 600
+        x = int(self.t[0].item()) + 600
+        y = int(self.t[2].item()) + 600
         cv2.circle(self.trajectory_image, (x, y), 2, (0, 0, 255), 1)
 
+    def pad_image(self, img, target_height):
+        """
+
+        Pads ``img`` with black pixels to match the ``target_height``
+
+        """
+        height, width = img.shape[:2]
+        if height < target_height:
+            padding_top = (target_height - height) // 2
+            padding_bottom = target_height - height - padding_top
+            img_padded = cv2.copyMakeBorder(img, padding_top, padding_bottom, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+
+            return img_padded
+        
+        return img
 
     def play_from_list(self, images):
         for image in images:
@@ -127,7 +143,7 @@ class VisualOdometry:
                 img_kp2 = self.draw_keypoints(image, keypoints)
                 img_matches = self.draw_matches(self.prev_image, self.prev_keypoints, image, keypoints, matches)
                 
-                cv2.imshow("Matches", img_matches)
+                #cv2.imshow("Matches", img_matches)
 
 
                 self.t += self.R @ t 
@@ -135,13 +151,19 @@ class VisualOdometry:
 
 
                 self.draw_trajectory()
-                cv2.imshow("Trajectory", self.trajectory_image)
+                #cv2.imshow("Trajectory", self.trajectory_image)
+
+                padded_camera_image = self.pad_image(cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), target_height=self.trajectory_image.shape[0])
+
+                combined_image = cv2.hconcat([padded_camera_image, self.trajectory_image])
+
+                cv2.imshow("Camera and Trajectory", combined_image)
 
             self.prev_image = image
             self.prev_keypoints = keypoints
             self.prev_descriptors = descriptors
 
-            cv2.imshow("Current Image", image)
+            #cv2.imshow("Current Image", image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
