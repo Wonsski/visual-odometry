@@ -26,6 +26,8 @@ class VisualOdometry:
         self.R = np.eye(3)
         self.t = np.zeros((3, 1))
         self.trajectory_image = np.zeros((1200, 1200, 3), dtype=np.uint8) + 255
+        self.video_writer = None
+        self.frame_size = (2426, 1200)
     
     def load_kitti(self, data_dir):
         """
@@ -127,8 +129,21 @@ class VisualOdometry:
             return img_padded
         
         return img
+    
+    def start_video_writer(self, output_file, frame_size, fps=20):
+        """
 
-    def play_from_list(self, images):
+        Initializes video writer for saving combined frames.
+
+        """
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        self.video_writer = cv2.VideoWriter(output_file, fourcc, fps, frame_size)
+
+    def play_from_list(self, images, output_video_file=None):
+        
+        if output_video_file:
+            self.start_video_writer(output_video_file, self.frame_size)
+
         for image in images:
             if image is None:
                 continue
@@ -159,6 +174,9 @@ class VisualOdometry:
 
                 cv2.imshow("Camera and Trajectory", combined_image)
 
+                if self.video_writer is not None:
+                    self.video_writer.write(combined_image)
+
             self.prev_image = image
             self.prev_keypoints = keypoints
             self.prev_descriptors = descriptors
@@ -167,7 +185,8 @@ class VisualOdometry:
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
+        if self.video_writer is not None:
+            self.video_writer.release()
 
 def main():
     
@@ -175,7 +194,7 @@ def main():
 
     images = vo.load_kitti("data/dataset/sequences/06/")
 
-    vo.play_from_list(images)
+    vo.play_from_list(images, output_video_file="trajectory_output.mp4")
 
 if __name__=="__main__":
     main()
